@@ -8,6 +8,10 @@
 
 
 
+
+
+
+
 const {
   cmd,
   commands
@@ -15,7 +19,7 @@ const {
 cmd({
   'pattern': 'vv',
   'alias': ['vo', "veiewonce"],
-  'react': '🗳️',
+  'react': '✨',
   'desc': "read vv",
   'category': "download",
   'filename': __filename
@@ -99,3 +103,4 @@ cmd({
   } else {
     return _0x597c0c("This is not a ViewOnce message");
   }
+});
