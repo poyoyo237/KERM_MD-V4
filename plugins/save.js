@@ -1,54 +1,63 @@
-//CODING BY NOTNING ❤️‍🩹🫅🏻
-const config = require('../config');
-const { cmd, commands } = require('../command');
-const fs = require('fs');
-const path = require('path');
+
+
+
+
+
+
+
+
+
+
+
+const { cmd } = require('../command');
 
 cmd({
     pattern: "save",
-    react: "📁",
-    alias: ["store"],
-    desc: "Save and send back a media file (image, video, or audio).",
-    category: "media",
-    use: ".save <caption>",
-    filename: __filename,
-},
-async (conn, mek, m, { quoted, q, reply }) => {
+    desc: "Download and directly send media back to the user",
+    category: "utility",
+    use: ".save (reply to media)",
+    filename: __filename
+}, async (conn, mek, m, { quoted, react, sender }) => {
     try {
-        if (!quoted) {
-            return reply("❌ Reply to a media message (video, image, or audio) with the `.save` command.");
+        // Vérifie si le message cité contient des médias
+        if (!quoted || !(quoted.imageMessage || quoted.videoMessage || quoted.audioMessage || quoted.documentMessage)) {
+            return react("❌"); // Réaction en cas d'erreur
         }
 
-        const messageType = quoted.mtype;
-        let mediaType;
+        // Réagit avec un sablier pour indiquer que l'opération est en cours
+        await react("⏳");
 
-        // Determine the type of media
-        if (/video/.test(messageType)) {
-            mediaType = "video";
-        } else if (/image/.test(messageType)) {
-            mediaType = "image";
-        } else if (/audio/.test(messageType)) {
-            mediaType = "audio";
-        } else {
-            return reply("❌ Only video, image, or audio messages are supported.");
+        // Télécharge le média
+        const mediaBuffer = await conn.downloadMediaMessage(quoted);
+
+        if (!mediaBuffer) {
+            return react("❌"); // Réaction en cas d'échec du téléchargement
         }
 
-        // Download and save the media file
-        const mediaPath = await conn.downloadAndSaveMediaMessage(quoted);
-        const filePath = path.resolve(mediaPath);
+        // Détecte le type de média
+        const mediaType = quoted.imageMessage
+            ? "image"
+            : quoted.videoMessage
+            ? "video"
+            : quoted.audioMessage
+            ? "audio"
+            : quoted.documentMessage
+            ? "document"
+            : null;
 
-        // Send the saved media back
-        const mediaMessage = {
-            caption: q || '',
-        }       
+        if (!mediaType) {
+            return react("❌"); // Réaction en cas de type de média non supporté
+        }
 
-        mediaMessage[mediaType] = { url: `file://${filePath}` }
-    
-        await conn.sendMessage(m.sender, mediaMessage, { quoted: mek })
-        await reply("✅ Successfully saved and sent the media file.")
-    } catch (error) {
-        console.error(error);
-        reply("❌ Failed to save and send the media. Please try again.")
+        // Envoie directement le média dans la discussion
+        await conn.sendMessage(sender, {
+            [mediaType]: mediaBuffer,
+        });
+
+        // Réagit avec ✅ pour indiquer que l'opération est terminée
+        await react("✅");
+    } catch (e) {
+        console.error("Error in save command:", e);
+        react("❌"); // Réaction en cas d'erreur
     }
-   
 });
